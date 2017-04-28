@@ -55,3 +55,12 @@ curl localhost:8080/env
 ```
 
 Returns the list of container env variables.
+
+** /exit/exitCode endpoint **
+
+```bash
+curl localhost:8080/exit/0
+curl localhost:8080/exit/1
+```
+
+Exit from the service and returns the given code

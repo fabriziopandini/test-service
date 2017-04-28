@@ -1,3 +1,3 @@
 FROM scratch
-COPY service /
-ENTRYPOINT ["/service"]
+COPY test-service /
+ENTRYPOINT ["/test-service"]

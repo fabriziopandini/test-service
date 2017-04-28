@@ -1,4 +1,4 @@
-NAME = fabriziopandini/service
+NAME = fabriziopandini/test-service
 VERSION = 0.1
 
 all: package

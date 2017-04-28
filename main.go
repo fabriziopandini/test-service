@@ -1,4 +1,4 @@
-package main // import "github.com/fabriziopandini/service"
+package main // import "github.com/fabriziopandini/test-service"
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"io"
@@ -16,28 +17,29 @@ import (
 func main() {
 
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", hostname)
-	router.HandleFunc("/echo", echo)
-	router.HandleFunc("/echoheaders", echoheaders)
-	router.HandleFunc("/hostname", hostname)
-	router.HandleFunc("/fqdn", fqdn)
-	router.HandleFunc("/ip", ip)
-	router.HandleFunc("/env", env)
+	router.HandleFunc("/", doHostname)
+	router.HandleFunc("/echo", doEcho)
+	router.HandleFunc("/echoheaders", doEchoheaders)
+	router.HandleFunc("/hostname", doHostname)
+	router.HandleFunc("/fqdn", doFqdn)
+	router.HandleFunc("/ip", doIp)
+	router.HandleFunc("/env", doEnv)
+	router.HandleFunc("/exit/{exitCode:[0-9]+}", doExit)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
-func echo(w http.ResponseWriter, r *http.Request) {
+func doEcho(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, r.Body)
 }
 
-func echoheaders(w http.ResponseWriter, r *http.Request) {
+func doEchoheaders(w http.ResponseWriter, r *http.Request) {
 	for k, v := range r.Header {
 		fmt.Fprintf(w, "%s=%s\n", k, v)
 	}
 }
 
-func hostname(w http.ResponseWriter, r *http.Request) {
+func doHostname(w http.ResponseWriter, r *http.Request) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		fmt.Fprintf(w, "Error: %s!\n", err)
@@ -46,13 +48,13 @@ func hostname(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", hostname)
 }
 
-func env(w http.ResponseWriter, r *http.Request) {
+func doEnv(w http.ResponseWriter, r *http.Request) {
 	for _, env := range os.Environ() {
 		fmt.Fprintf(w, "%s\n", env)
 	}
 }
 
-func ip(w http.ResponseWriter, r *http.Request) {
+func doIp(w http.ResponseWriter, r *http.Request) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		fmt.Fprintf(w, "Error: %s!\n", err)
@@ -80,7 +82,7 @@ func ip(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func fqdn(w http.ResponseWriter, r *http.Request) {
+func doFqdn(w http.ResponseWriter, r *http.Request) {
 	// from https://github.com/ShowMax/go-fqdn/blob/master/fqdn.go
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -112,4 +114,11 @@ func fqdn(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Fprintf(w, "%s\n", hostname)
+}
+
+func doExit(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	exitCode, _ := strconv.Atoi(vars["exitCode"])
+
+	os.Exit(exitCode)
 }
