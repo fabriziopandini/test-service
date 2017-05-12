@@ -2,19 +2,23 @@ package main // import "github.com/fabriziopandini/test-service"
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-
-	"io"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
+var startTime time.Time
+
 func main() {
+
+	startTime = time.Now()
 
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", doHostname)
@@ -24,9 +28,17 @@ func main() {
 	router.HandleFunc("/fqdn", doFqdn)
 	router.HandleFunc("/ip", doIp)
 	router.HandleFunc("/env", doEnv)
+	router.HandleFunc("/healthz", doHealthz)
+	router.HandleFunc("/healthz-fail", doFailHealthz)
 	router.HandleFunc("/exit/{exitCode:[0-9]+}", doExit)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	serve := ":8080"
+	if port, err := strconv.Atoi(os.Getenv("TEST_SERVICE_PORT")); err == nil && port != 0 {
+		serve = fmt.Sprintf(":%d", port)
+	}
+	fmt.Printf("Serving %s\n", serve)
+
+	log.Fatal(http.ListenAndServe(serve, router))
 }
 
 func doEcho(w http.ResponseWriter, r *http.Request) {
@@ -121,4 +133,24 @@ func doExit(w http.ResponseWriter, r *http.Request) {
 	exitCode, _ := strconv.Atoi(vars["exitCode"])
 
 	os.Exit(exitCode)
+}
+
+func doHealthz(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Uptime %s\n", time.Since(startTime))
+	fmt.Fprintf(w, "OK\n")
+}
+
+func doFailHealthz(w http.ResponseWriter, r *http.Request) {
+	failAt := 10.0
+	uptime := time.Since(startTime).Seconds()
+
+	if uptime < failAt {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "still OK, %.1f seconds before failing\n", failAt-uptime)
+	} else {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "failed since %.1f seconds\n", uptime-failAt)
+	}
+	fmt.Fprintf(w, "Uptime %.1f\n", uptime)
 }
